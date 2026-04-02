@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Transactions - Personal Finance Tracker{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="mb-0"><i class="bi bi-upload me-2 text-primary"></i>Upload Transactions</h2>
+        <p class="text-muted">Import your bank statement or paste CSV data</p>
+    </div>
+</div>
+
+{% if not api_key_configured %}
+<div class="alert alert-warning d-flex align-items-center mb-4">
+    <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+    <div>
+        <strong>No API Key Configured.</strong>
+        AI categorization is unavailable. Transactions will be categorized using built-in rules.
+        Add <code>ANTHROPIC_API_KEY</code> to your <code>.env</code> file to enable AI categorization.
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <!-- Tabs -->
+        <div class="card border-0">
+            <div class="card-header bg-transparent border-secondary">
+                <ul class="nav nav-tabs card-header-tabs" id="uploadTabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="file-tab" data-bs-toggle="tab" href="#fileUpload">
+                            <i class="bi bi-file-earmark-arrow-up me-1"></i>File Upload
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="paste-tab" data-bs-toggle="tab" href="#pasteCSV">
+                            <i class="bi bi-clipboard-data me-1"></i>Paste CSV
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content">
+                    <!-- File Upload Tab -->
+                    <div class="tab-pane fade show active" id="fileUpload">
+                        <form action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data" id="fileForm">
+                            <div class="drop-zone mb-3" id="dropZone">
+                                <div class="drop-zone-content">
+                                    <i class="bi bi-cloud-arrow-up fs-1 text-primary mb-3"></i>
+                                    <p class="mb-1 fw-semibold">Drag &amp; drop your CSV file here</p>
+                                    <p class="text-muted small mb-3">or click to browse</p>
+                                    <input type="file" name="csv_file" id="fileInput"
+                                           accept=".csv,text/csv" class="d-none">
+                                    <button type="button" class="btn btn-outline-primary btn-sm"
+                                            onclick="document.getElementById('fileInput').click()">
+                                        Choose File
+                                    </button>
+                                    <p id="fileName" class="text-muted small mt-2"></p>
+                                </div>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" name="use_ai" id="useAiFile"
+                                       {% if not api_key_configured %}disabled{% endif %}
+                                       {% if api_key_configured %}checked{% endif %}>
+                                <label class="form-check-label" for="useAiFile">
+                                    <i class="bi bi-robot me-1 text-primary"></i>
+                                    Use AI categorization for unrecognized transactions
+                                    {% if not api_key_configured %}
+                                    <span class="text-muted">(requires API key)</span>
+                                    {% endif %}
+                                </label>
+                            </div>
+                            <button type="submit" class="btn btn-primary" id="fileSubmit" disabled>
+                                <i class="bi bi-upload me-1"></i>Upload & Import
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Paste CSV Tab -->
+                    <div class="tab-pane fade" id="pasteCSV">
+                        <form action="{{ url_for('upload') }}" method="post" id="pasteForm">
+                            <div class="mb-3">
+                                <label class="form-label">Paste CSV Content</label>
+                                <textarea name="csv_text" class="form-control font-monospace"
+                                          rows="12" placeholder="Date,Transaction Description,Category,Amount,Type
+2024-01-15,Starbucks Coffee,,12.50,Expense
+2024-01-16,Monthly Salary,,3500.00,Income"></textarea>
+                                <div class="form-text">
+                                    Include a header row. The <code>Category</code> column is optional
+                                    — if omitted, transactions will be categorized automatically.
+                                </div>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" name="use_ai" id="useAiPaste"
+                                       {% if not api_key_configured %}disabled{% endif %}
+                                       {% if api_key_configured %}checked{% endif %}>
+                                <label class="form-check-label" for="useAiPaste">
+                                    <i class="bi bi-robot me-1 text-primary"></i>
+                                    Use AI categorization for unrecognized transactions
+                                    {% if not api_key_configured %}
+                                    <span class="text-muted">(requires API key)</span>
+                                    {% endif %}
+                                </label>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-1"></i>Import CSV
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="col-lg-4">
+        <div class="card border-0 mb-3">
+            <div class="card-header bg-transparent border-secondary">
+                <h6 class="mb-0"><i class="bi bi-info-circle me-2 text-info"></i>Expected CSV Format</h6>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">Your CSV should have these columns (case-insensitive):</p>
+                <table class="table table-sm table-dark mb-2">
+                    <thead><tr><th>Column</th><th>Required</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>Date</code></td><td><span class="badge bg-danger">Required</span></td></tr>
+                        <tr><td><code>Transaction Description</code><br><small class="text-muted">(or Description)</small></td><td><span class="badge bg-danger">Required</span></td></tr>
+                        <tr><td><code>Amount</code></td><td><span class="badge bg-danger">Required</span></td></tr>
+                        <tr><td><code>Type</code></td><td><span class="badge bg-secondary">Optional</span></td></tr>
+                        <tr><td><code>Category</code></td><td><span class="badge bg-secondary">Optional</span></td></tr>
+                    </tbody>
+                </table>
+                <p class="small text-muted mb-1">
+                    <strong>Date format:</strong> YYYY-MM-DD preferred
+                </p>
+                <p class="small text-muted mb-1">
+                    <strong>Amount:</strong> Positive numbers (e.g. 42.50)
+                </p>
+                <p class="small text-muted">
+                    <strong>Type values:</strong> <code>Income</code> or <code>Expense</code>
+                </p>
+            </div>
+        </div>
+
+        <div class="card border-0 mb-3">
+            <div class="card-header bg-transparent border-secondary">
+                <h6 class="mb-0"><i class="bi bi-robot me-2 text-primary"></i>Categorization Pipeline</h6>
+            </div>
+            <div class="card-body">
+                <ol class="small text-muted mb-0 ps-3">
+                    <li class="mb-2">
+                        <strong class="text-light">Rule-based first pass</strong> —
+                        keyword matching for common merchants &amp; services (fast, free)
+                    </li>
+                    <li class="mb-2">
+                        <strong class="text-light">AI fallback</strong> —
+                        Claude Haiku categorizes ambiguous transactions
+                        {% if api_key_configured %}
+                        <span class="badge bg-success ms-1">Active</span>
+                        {% else %}
+                        <span class="badge bg-secondary ms-1">No key</span>
+                        {% endif %}
+                    </li>
+                    <li>
+                        <strong class="text-light">Default to "Other"</strong> —
+                        if both methods fail
+                    </li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="card border-0">
+            <div class="card-header bg-transparent border-secondary">
+                <h6 class="mb-0"><i class="bi bi-tags me-2 text-warning"></i>Supported Categories</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-1">
+                    {% for cat in categories %}
+                    <span class="badge category-badge category-{{ cat | replace(' ', '-') | replace('&', 'and') | lower }}">
+                        {{ cat }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const fileName = document.getElementById('fileName');
+const fileSubmit = document.getElementById('fileSubmit');
+
+function handleFile(file) {
+    if (file && file.name.endsWith('.csv')) {
+        fileName.textContent = file.name;
+        fileSubmit.disabled = false;
+        // Use DataTransfer to set file on input
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        fileInput.files = dt.files;
+    } else if (file) {
+        fileName.textContent = 'Please select a .csv file';
+        fileSubmit.disabled = true;
+    }
+}
+
+fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) handleFile(fileInput.files[0]);
+});
+
+dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+});
+
+dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('drag-over');
+});
+
+dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    handleFile(file);
+});
+
+dropZone.addEventListener('click', (e) => {
+    if (e.target !== fileInput && !e.target.closest('button')) {
+        fileInput.click();
+    }
+});
+
+// Show upload progress
+document.getElementById('fileForm').addEventListener('submit', () => {
+    fileSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Uploading...';
+    fileSubmit.disabled = true;
+});
+
+document.getElementById('pasteForm').addEventListener('submit', (e) => {
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Importing...';
+    btn.disabled = true;
+});
+</script>
+{% endblock %}

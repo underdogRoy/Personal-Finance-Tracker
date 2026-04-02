@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}AI Insights - Personal Finance Tracker{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h2 class="mb-0"><i class="bi bi-lightbulb me-2 text-warning"></i>AI Financial Insights</h2>
+            <p class="text-muted">Personalized analysis and savings recommendations</p>
+        </div>
+        {% if api_key_configured %}
+        <a href="{{ url_for('insights') }}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-clockwise me-1"></i>Regenerate Insights
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Summary Stats Row -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-md-3">
+        <div class="card border-0 text-center">
+            <div class="card-body py-3">
+                <p class="text-muted small mb-1">Total Income</p>
+                <h5 class="text-success mb-0">${{ "{:,.2f}".format(stats.total_income) }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+        <div class="card border-0 text-center">
+            <div class="card-body py-3">
+                <p class="text-muted small mb-1">Total Expenses</p>
+                <h5 class="text-danger mb-0">${{ "{:,.2f}".format(stats.total_expense) }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+        <div class="card border-0 text-center">
+            <div class="card-body py-3">
+                <p class="text-muted small mb-1">Net Savings</p>
+                <h5 class="{{ 'text-info' if stats.net_savings >= 0 else 'text-danger' }} mb-0">
+                    ${{ "{:,.2f}".format(stats.net_savings) }}
+                </h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+        <div class="card border-0 text-center">
+            <div class="card-body py-3">
+                <p class="text-muted small mb-1">Savings Rate</p>
+                {% if stats.total_income > 0 %}
+                {% set rate = (stats.net_savings / stats.total_income * 100) %}
+                <h5 class="{{ 'text-success' if rate >= 20 else ('text-warning' if rate >= 10 else 'text-danger') }} mb-0">
+                    {{ "{:.1f}".format(rate) }}%
+                </h5>
+                {% else %}
+                <h5 class="text-muted mb-0">N/A</h5>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Insights Content -->
+<div class="row">
+    <div class="col-lg-8">
+        {% if not api_key_configured %}
+        <div class="card border-0">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-robot fs-1 text-muted mb-3 d-block"></i>
+                <h5 class="text-muted">AI Insights Unavailable</h5>
+                <p class="text-muted mb-4">
+                    To get personalized financial insights powered by Claude AI,
+                    add your Anthropic API key to the <code>.env</code> file.
+                </p>
+                <div class="card bg-dark border-secondary d-inline-block text-start px-4 py-3 mb-4">
+                    <code class="text-success">ANTHROPIC_API_KEY=your_api_key_here</code>
+                </div>
+                <div class="d-block">
+                    <h6 class="text-muted mb-3">In the meantime, here are general savings tips:</h6>
+                    <ul class="list-group list-group-flush text-start">
+                        <li class="list-group-item bg-transparent border-secondary">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            Aim to save at least 20% of your income (the 50/30/20 rule)
+                        </li>
+                        <li class="list-group-item bg-transparent border-secondary">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            Track every expense — awareness is the first step to change
+                        </li>
+                        <li class="list-group-item bg-transparent border-secondary">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            Build an emergency fund covering 3-6 months of expenses
+                        </li>
+                        <li class="list-group-item bg-transparent border-secondary">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            Review subscriptions monthly and cancel ones you don't use
+                        </li>
+                        <li class="list-group-item bg-transparent border-secondary">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            Set specific savings goals with target dates
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% elif insights_html %}
+        <div class="card border-0">
+            <div class="card-header bg-transparent border-secondary d-flex align-items-center gap-2">
+                <i class="bi bi-stars text-warning fs-5"></i>
+                <h6 class="mb-0">Personalized Recommendations</h6>
+                <span class="badge bg-primary ms-auto">Powered by Claude</span>
+            </div>
+            <div class="card-body">
+                <div class="insights-content">
+                    {{ insights_html | safe }}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="card border-0">
+            <div class="card-body text-center py-5">
+                <div class="spinner-border text-primary mb-3" role="status"></div>
+                <h5>Generating Insights...</h5>
+                <p class="text-muted">Claude AI is analyzing your financial data</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Quick Stats Card -->
+        <div class="card border-0 mb-3">
+            <div class="card-header bg-transparent border-secondary">
+                <h6 class="mb-0"><i class="bi bi-bar-chart me-2 text-primary"></i>Quick Analysis</h6>
+            </div>
+            <div class="card-body">
+                {% if stats.total_income > 0 %}
+                {% set expense_rate = (stats.total_expense / stats.total_income * 100) %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span class="text-muted">Expense ratio</span>
+                        <span class="{{ 'text-danger' if expense_rate > 80 else ('text-warning' if expense_rate > 60 else 'text-success') }}">
+                            {{ "{:.1f}".format(expense_rate) }}%
+                        </span>
+                    </div>
+                    <div class="progress" style="height:6px;">
+                        <div class="progress-bar {{ 'bg-danger' if expense_rate > 80 else ('bg-warning' if expense_rate > 60 else 'bg-success') }}"
+                             style="width: {{ [expense_rate, 100]|min }}%"></div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between small">
+                        <span class="text-muted">Transactions</span>
+                        <span>{{ stats.transaction_count }}</span>
+                    </div>
+                </div>
+
+                {% if stats.transaction_count > 0 %}
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between small">
+                        <span class="text-muted">Avg. expense</span>
+                        <span>${{ "{:,.2f}".format(stats.total_expense / stats.transaction_count) }}</span>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card border-0">
+            <div class="card-header bg-transparent border-secondary">
+                <h6 class="mb-0"><i class="bi bi-info-circle me-2 text-info"></i>About AI Insights</h6>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted mb-2">
+                    Insights are generated by <strong>Claude Sonnet</strong> based on your actual
+                    transaction data, including:
+                </p>
+                <ul class="small text-muted ps-3 mb-2">
+                    <li>Spending patterns by category</li>
+                    <li>Monthly income vs. expense trends</li>
+                    <li>Your personal savings rate</li>
+                    <li>Top expense areas</li>
+                </ul>
+                <p class="small text-muted mb-0">
+                    Each regeneration produces fresh analysis. Your data is never stored by Anthropic.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
