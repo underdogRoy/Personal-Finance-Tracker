@@ -1,12 +1,6 @@
 import json
 import re
 
-try:
-    import anthropic as _anthropic_module
-    ANTHROPIC_AVAILABLE = True
-except ImportError:
-    ANTHROPIC_AVAILABLE = False
-
 CATEGORIES = [
     'Food & Drink', 'Utilities', 'Rent', 'Entertainment', 'Health & Fitness',
     'Shopping', 'Travel', 'Investment', 'Salary', 'Other'
@@ -64,7 +58,7 @@ def rule_based_categorize(description: str):
 
 
 def llm_categorize(description: str, amount: float, transaction_type: str, client) -> str:
-    """Use Claude Haiku to categorize a single transaction. Returns category string."""
+    """Use Gemini to categorize a single transaction. Returns category string."""
     categories_str = ', '.join(CATEGORIES)
     prompt = (
         f"Classify the following financial transaction into exactly one of these categories: {categories_str}.\n\n"
@@ -76,12 +70,8 @@ def llm_categorize(description: str, amount: float, transaction_type: str, clien
     )
 
     try:
-        message = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=64,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        raw = message.content[0].text.strip()
+        response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+        raw = response.text.strip()
         # Extract JSON even if there's surrounding text
         match = re.search(r'\{.*?"category"\s*:\s*"([^"]+)".*?\}', raw, re.DOTALL)
         if match:
@@ -141,12 +131,8 @@ def batch_categorize_with_llm(transactions: list, client) -> list:
         )
 
         try:
-            message = client.messages.create(
-                model="claude-haiku-4-5-20251001",
-                max_tokens=512,
-                messages=[{"role": "user", "content": prompt}]
-            )
-            raw = message.content[0].text.strip()
+            response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+            raw = response.text.strip()
             # Extract JSON array
             match = re.search(r'\[.*\]', raw, re.DOTALL)
             if match:

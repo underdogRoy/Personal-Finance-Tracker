@@ -12,12 +12,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Optional anthropic import
+# Optional google.genai import
 try:
-    import anthropic as _anthropic_lib
-    ANTHROPIC_PACKAGE_AVAILABLE = True
+    from google import genai
+    GENAI_PACKAGE_AVAILABLE = True
 except ImportError:
-    ANTHROPIC_PACKAGE_AVAILABLE = False
+    GENAI_PACKAGE_AVAILABLE = False
 
 try:
     import pandas as pd
@@ -39,11 +39,11 @@ from insights import generate_insights
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 
-ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
-anthropic_client = None
-if ANTHROPIC_PACKAGE_AVAILABLE and ANTHROPIC_API_KEY:
+GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY', '')
+anthropic_client = None  # reused as the genai client handle
+if GENAI_PACKAGE_AVAILABLE and GOOGLE_API_KEY:
     try:
-        anthropic_client = _anthropic_lib.Anthropic(api_key=ANTHROPIC_API_KEY)
+        anthropic_client = genai.Client(api_key=GOOGLE_API_KEY)
     except Exception:
         anthropic_client = None
 
@@ -119,7 +119,7 @@ def check_auto_load():
 @app.context_processor
 def inject_globals():
     return {
-        'api_key_configured': bool(ANTHROPIC_API_KEY),
+        'api_key_configured': bool(GOOGLE_API_KEY),
         'categories': CATEGORIES,
     }
 

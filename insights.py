@@ -46,12 +46,8 @@ Please provide 5-7 specific, actionable insights based on this data. Format your
 Make the advice practical and motivating. Do not include any text outside the HTML list."""
 
     try:
-        message = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=1024,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        raw = message.content[0].text.strip()
+        response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+        raw = response.text.strip()
 
         # Ensure we have valid HTML — if the model returned plain text, wrap it
         if not raw.startswith('<'):
@@ -64,6 +60,6 @@ Make the advice practical and motivating. Do not include any text outside the HT
         return (
             f'<ul>'
             f'<li>Unable to generate insights at this time. Error: {str(e)}</li>'
-            f'<li>Please check your Anthropic API key and try again.</li>'
+            f'<li>Please check your Google API key and try again.</li>'
             f'</ul>'
         )
